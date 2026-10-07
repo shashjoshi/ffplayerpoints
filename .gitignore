@@ -1,6 +1,6 @@
 .env 
-libtest.
+libtest.ipynb
 .ipynb_checkpoints/
 */.ipynb_checkpoints/*
 data/
-.egg-info
+*.egg-info

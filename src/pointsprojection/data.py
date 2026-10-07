@@ -13,9 +13,9 @@
 
 #Imports
 import nflreadpy as nfldata
-import polars as pl
 from pathlib import Path
-from datetime import date
+import pandas as pd
+from datetime import datetime
 
 #Load Functions from nflreadpy
 load_injuries = nfldata.load_injuries
@@ -28,61 +28,55 @@ source_map = {
     "rosters": load_roster,
 }
 
-#Downloads data given source and seasons
-def download(source:str, seasons:list[int], force=False):
-    if source in source_map:
-        function = source_map.get(source)
-        for i in seasons:
-            currentdir = Path.cwd()
-            targetdir = currentdir.parent.parent / "data" / "raw" / f"{source}_{i}.csv"
-            if targetdir.exists():
-                print(f"{source} {i} data already downloaded.")
-                if !force:
-                    print("Skipped")
-                else:
-                    targetdir.parent.mkdir(parents = True, exist_ok = True)
-                    rawdf = function(i)
-                    rawdf.write_csv(targetdir)
-            else:
-                targetdir.parent.mkdir(parents = True, exist_ok = True)
-                rawdf = function(i)
-                rawdf.write_csv(targetdir)
-    else:
+#Fix the messy pathing and make it consistent over all file systems
+this_path = Path(__file__).resolve()
+ROOT_DIR = next(p for p in this_path.parents if (p/".git").exists())
+RAW_DIR = ROOT_DIR/"data"/"raw"
+
+def validatesource (source:str):
+    if source not in source_map:
         raise ValueError(f"Source not in Source Directory. Current Source Directory: {source_map.keys()}")
 
+def getpath (source:str, season:int):
+    validatesource(source)
+    return RAW_DIR / f"{source}" / f"{source}_{season}.csv"
+
+def writetocsv(file_path, function, season):
+    file_path.parent.mkdir(parents = True, exist_ok = True)
+    rawdf = function(season)
+    rawdf.write_csv(file_path)
+
+#Downloads data given source and seasons
+def download(source:str, seasons:list[int], force=False):
+    validatesource(source)
+    function = source_map[source]
+    for i in seasons:
+        file_path = getpath(source, i)
+        if file_path.exists() and not force:
+            print(f"{source} {i} data already downloaded. Not Forcing, Skipped")
+        else:
+            writetocsv(file_path, function, i)
+    
 #Refreshes Current Season, Currently 2026/27
-def refresh26(source:str):
-    if source in source_map:
-        function = source_map.get(source)
-        currentdir = Path.cwd()
-        targetdir = currentdir.parent.parent / "data" / "raw" / f"{source}_2026.csv"
-        targetdir.parent.mkdir(parents = True, exist_ok = True)
-        rawdf = function(2026)
-        rawdf.write_csv(targetdir)
-    else:
-        raise ValueError(f"Source not in Source Directory. Current Source Directory: {source_map.keys()}")
-def printlastdownload():
-    print(f"Current data last downloaded {last26download}")
+def refreshseason(source:str, season:int):
+    download(source, [season], force=True)
+
+def printlastdownload(source, season):
+    path = getpath(source, season)
+    mtime_timestamp = path.stat().st_mtime
+    lastdownload = datetime.fromtimestamp(mtime_timestamp)
+    print(f"Current data last downloaded {lastdownload}")
 
 
 #Loads data back from csv to pandas df
-def loadtodf(source:str, seasons:list[int]):
-    if source in source_map:
-        function = source_map.get(source)
-        for i in seasons:
-            currentdir = Path.cwd()
-            targetdir = currentdir.parent.parent / "data" / "raw" / f"{source}_{i}.csv"
-            if !targetdir.exists():
-                raise RuntimeError(f"File not found. Check for download")
-            else:
-                
-    else:
-        raise KeyError(f"Source not in Source Directory. Current Source Directory: {source_map.keys()}")
-
-
-
-#FIXES AND WIP
-#Fix File Pathing
-#Create Helper Functions for repeated code
-#Fix lastdownloaded Tracking
-#Make refresh function generalizable
+def loadtodf(source: str, seasons: list[int], parse_dates: list[str] | None = None) -> pd.DataFrame:
+    validatesource(source)
+    frames = []
+    for i in seasons:
+        file_path = getpath(source, i)
+        if not file_path.exists():
+            raise FileNotFoundError(
+                f"No {source} data for {i} at {file_path}. Run download('{source}', [{i}]) first."
+            )
+        frames.append(pd.read_csv(file_path, parse_dates=parse_dates, low_memory=False))
+    return pd.concat(frames, ignore_index=True)

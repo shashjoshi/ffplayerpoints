@@ -2,3 +2,5 @@
 libtest.
 .ipynb_checkpoints/
 */.ipynb_checkpoints/*
+data/
+.egg-info

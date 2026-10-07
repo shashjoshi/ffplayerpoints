@@ -1,0 +1,11 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build_backend = "setuptools.build_meta"
+
+[project]
+name = "fantasyprojection"
+version = "0.1.0"
+description = "A Fantasy Points Projection Model/Data Pipeline"
+readme = "README.md"
+requires-python = ">=3.14"
+authors = [{name = "Shashwat Joshi", email = "shashwatjoshi@berkeley.edu"}]

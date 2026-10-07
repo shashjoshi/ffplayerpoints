@@ -1,0 +1,16 @@
+Metadata-Version: 2.4
+Name: fantasyprojection
+Version: 0.1.0
+Summary: A Fantasy Points Projection Model/Data Pipeline
+Author-email: Shashwat Joshi <shashwatjoshi@berkeley.edu>
+Requires-Python: >=3.14
+Description-Content-Type: text/markdown
+
+Fantasy Football Player Points Prediction Model
+
+
+
+Linear Regression to predict players fantasy points in a given weak
+
+Works for Position players, excludes D/ST and K
+

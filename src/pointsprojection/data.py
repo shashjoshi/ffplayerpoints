@@ -16,22 +16,26 @@ import nflreadpy as nfldata
 from pathlib import Path
 import pandas as pd
 from datetime import datetime
+from functools import partial
 
-#Load Functions from nflreadpy
-load_injuries = nfldata.load_injuries
-load_schedule = nfldata.load_schedules
-load_roster = nfldata.load_rosters_weekly
 #Map sources to functions for ease of access
 source_map = {
-    "injury": load_injuries,
-    "schedules": load_schedule,
-    "rosters": load_roster,
+    "injury": nfldata.load_injuries,
+    "schedules": nfldata.load_schedules,
+    "rosters": nfldata.load_rosters_weekly,
+    "playbyplay": nfldata.load_pbp,
+    "snapcounts": nfldata.load_snap_counts,
+    "playerstats": nfldata.load_player_stats,
+    "ngs_receiving": partial(nfldata.load_nextgen_stats, stat_type="receiving"),
+    "ngs_passing": partial(nfldata.load_nextgen_stats, stat_type="passing"),
+    "ngs_rushing": partial(nfldata.load_nextgen_stats, stat_type="rushing"),
 }
 
 #Fix the messy pathing and make it consistent over all file systems
 this_path = Path(__file__).resolve()
 ROOT_DIR = next(p for p in this_path.parents if (p/".git").exists())
 RAW_DIR = ROOT_DIR/"data"/"raw"
+PROC_DIR = ROOT_DIR/"data"/"processed"
 
 def validatesource (source:str):
     if source not in source_map:

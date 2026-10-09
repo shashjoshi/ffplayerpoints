@@ -8,6 +8,7 @@
 #5. Stats (Of which we include all but current game)
 
 #We use data from 2016 on
+#2015/16 is used historically for initial 2016 weeks
 #2016/17-2024/25 is used for training
 #2025/26 will be used for testing
 
@@ -56,6 +57,8 @@ def download(source:str, seasons:list[int], force=False):
     function = source_map[source]
     for i in seasons:
         file_path = getpath(source, i)
+        if i < 2016 and "ngs" in source:
+            continue
         if file_path.exists() and not force:
             print(f"{source} {i} data already downloaded. Not Forcing, Skipped")
         else:
@@ -78,6 +81,8 @@ def loadtodf(source: str, seasons: list[int], parse_dates: list[str] | None = No
     frames = []
     for i in seasons:
         file_path = getpath(source, i)
+        if i < 2016 and "ngs" in source:
+            continue
         if not file_path.exists():
             raise FileNotFoundError(
                 f"No {source} data for {i} at {file_path}. Run download('{source}', [{i}]) first."

@@ -31,6 +31,11 @@ CREATE OR REPLACE MACRO norm_team(t) AS
         WHEN 'OAK' THEN 'LV'
         WHEN 'SD' THEN 'LAC'
         WHEN 'STL' THEN 'LA'
+        WHEN 'SL' THEN 'LA'
+        WHEN 'ARZ' THEN 'ARI'
+        WHEN 'BLT' THEN 'BAL'
+        WHEN 'CLV' THEN 'CLE'
+        WHEN 'HST' THEN 'HOU'
         ELSE t
     END;
 """,
@@ -536,13 +541,13 @@ def run_checks(con: duckdb.DuckDBPyConnection) -> dict:
         "null_spread": q("SELECT COUNT(*) FROM player_weeks WHERE team_spread IS NULL"),
         #NGS coverage among players with real volume (5+ targets / 10+ attempts / 10+ carries)
         "pct_ngs_receiving_5plus_targets": q(
-            "SELECT AVG(has_ngs_receiving::INT) FROM player_weeks WHERE targets >= 5"
+            "SELECT AVG(has_ngs_receiving::INT) FROM player_weeks WHERE targets >= 5 AND season >= 2016"
         ),
         "pct_ngs_passing_10plus_attempts": q(
-            "SELECT AVG(has_ngs_passing::INT) FROM player_weeks WHERE attempts >= 10"
+            "SELECT AVG(has_ngs_passing::INT) FROM player_weeks WHERE attempts >= 10 AND season >= 2016"
         ),
         "pct_ngs_rushing_10plus_carries": q(
-            "SELECT AVG(has_ngs_rushing::INT) FROM player_weeks WHERE carries >= 10"
+            "SELECT AVG(has_ngs_rushing::INT) FROM player_weeks WHERE carries >= 10 AND season >= 2016"
         ),
     }
 

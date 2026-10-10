@@ -43,24 +43,44 @@ def createfeatures(player_weeks):
     columnlist = ['ppr_last3_mean', 'ppr_last5_mean', 'ppr_last8_mean', 'ppr_last3_n', 'ppr_last5_n', 'ppr_last8_n', 'ppr_ewm', 'ppr_last8_std', 'ppr_career_mean']
     countcolumns = ['ppr_last3_n', 'ppr_last5_n', 'ppr_last8_n']
     #Lag features and forward fill necessary
-    player_weeks = player_weeks.lagfeatures(player_weeks, columnlist, countcolumns)
+    player_weeks = lagfeatures(player_weeks, columnlist, countcolumns)
 
 
-    #GROUP 2 FEATURES(Season Scoped)
-    player_weeks['games_played_this_season']
-    player_weeks['ppr_season_mean']
-    player_weeks['ppr_prior_season_mean']
-    player_weeks['prior_season_games']
+    #GROUP 1 FEATURES(Season Scoped)
+    grouped_seasons = played_rows.groupby(['gsis_id','season'])
+    player_weeks['games_played_this_season'] = grouped_seasons.cumcount() + 1
+    player_weeks['ppr_season_mean'] = grouped_seasons['fantasy_points_ppr'].transform(lambda x: x.expanding().mean())
+    player_weeks = priorseasonfeatures(player_weeks)
+    player_weeks = lagfeatures(player_weeks, ['games_played_this_season', 'ppr_season_mean'], ['games_played_this_season'], by = ['gsis_id', 'season'])
+
+
+    
     return player_weeks
 
-def lagfeatures (player_weeks, columns, count_columns = None):
+def lagfeatures (player_weeks, columns, count_columns = None, by = ['gsis_id']):
     #Group by id
-    grouped_weeks = player_weeks.groupby('gsis_id')[columns]
+    grouped_weeks = player_weeks.groupby(by)[columns]
     #Shift and forward fill
     player_weeks[columns] = grouped_weeks.shift(1)
-    player_weeks[columns] = player_weeks.groupby('gsis_id')[columns].ffill()
+    player_weeks[columns] = player_weeks.groupby(by)[columns].ffill()
 
     #fill nan for necessary columns
     if count_columns:
         player_weeks[count_columns] = player_weeks[count_columns].fillna(0)
+    return player_weeks
+
+def priorseasonfeatures(player_weeks):
+    played_rows = player_weeks[player_weeks['played']]
+    season_summary = (
+        played_rows.groupby(['gsis_id', 'season'], as_index=False)
+        .agg(ppr_prior_season_mean=('fantasy_points_ppr','mean'),
+            prior_season_games = ('fantasy_points_ppr','size'))
+    )
+
+    season_summary['season'] = season_summary['season'] + 1
+
+    player_weeks = player_weeks.drop(columns=['ppr_prior_season_mean', 'prior_season_games'], errors='ignore')
+    player_weeks = player_weeks.merge(season_summary, on=['gsis_id','season'], how='left')
+
+    player_weeks['prior_season_games'] = player_weeks['prior_season_games'].fillna(0)
     return player_weeks

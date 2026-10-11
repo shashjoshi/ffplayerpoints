@@ -4,6 +4,43 @@ import numpy as np
 import pandas as pd
 
 
+#Feature Registry
+featurereg = {
+    #List of all Features
+    'featureslst' : [
+        'ppr_last3_mean',
+        'ppr_last5_mean',
+        'ppr_last8_mean',
+        'ppr_last3_n',
+        'ppr_last5_n',
+        'ppr_last8_n',
+        'ppr_ewm',
+        'ppr_last8_std',
+        'ppr_career_mean',
+        'games_played_this_season',
+        'ppr_season_mean',
+        'ppr_prior_season_mean',
+        'prior_season_games'
+    ],
+    #List of all identifiers and keys
+    'idlst': [
+        'gsis_id',
+        'season',
+        'week',
+        'gameorderkey',
+        'game_id',
+        'player_name',
+        'position',
+        'team',
+        'opponent',
+        'played'
+    ],
+    #List of targets for models
+    'target' : [
+        'fantasy_points_ppr'
+    ]
+}
+
 #Create filters for whether a player played and ordering games and making a key index
 def createfilters():
     #load
@@ -54,6 +91,9 @@ def createfeatures(player_weeks):
     player_weeks = lagfeatures(player_weeks, ['games_played_this_season', 'ppr_season_mean'], ['games_played_this_season'], by = ['gsis_id', 'season'])
 
 
+    #GROUP 3 FEATURES
+    #team_spread, total_line, implied_team_total, rest_days, is_home, is_neutral_site, is_division_game, is_indoor
+    #Exist already in natural state
     
     return player_weeks
 
@@ -70,17 +110,32 @@ def lagfeatures (player_weeks, columns, count_columns = None, by = ['gsis_id']):
     return player_weeks
 
 def priorseasonfeatures(player_weeks):
+    #Get played, same as before
     played_rows = player_weeks[player_weeks['played']]
+    #Group by seasons to get summaries
     season_summary = (
         played_rows.groupby(['gsis_id', 'season'], as_index=False)
         .agg(ppr_prior_season_mean=('fantasy_points_ppr','mean'),
             prior_season_games = ('fantasy_points_ppr','size'))
     )
 
+    #Shift by one for prior
     season_summary['season'] = season_summary['season'] + 1
 
+    #Drop and remerge
     player_weeks = player_weeks.drop(columns=['ppr_prior_season_mean', 'prior_season_games'], errors='ignore')
     player_weeks = player_weeks.merge(season_summary, on=['gsis_id','season'], how='left')
 
+    #Fill na values with 0
     player_weeks['prior_season_games'] = player_weeks['prior_season_games'].fillna(0)
     return player_weeks
+
+def buildfeatures():
+    #Call createfilters() and createfeatures()
+    features_df = createfilters()
+    features_df = createfeatures(features_df)
+    #Drop rows for seasons before 2016
+    features_df = features_df[features_df['season'] >= 2016].reset_index(drop=True)
+    #keep only relevant columns(features, ids, target)
+    features_df = features_df[featurereg['featureslst'] + featurereg['idlst'] + featurereg['target']]
+    return features_df

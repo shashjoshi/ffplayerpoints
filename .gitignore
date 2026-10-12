@@ -4,3 +4,4 @@ libtest.ipynb
 */.ipynb_checkpoints/*
 data/
 *.egg-info
+*/.__pycache__/*

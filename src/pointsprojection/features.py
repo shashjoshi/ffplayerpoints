@@ -6,8 +6,8 @@ import pandas as pd
 
 #Feature Registry
 featurereg = {
-    #List of all Features
-    'featureslst' : [
+    #List of production features for players specifically
+    'productionlst' : [
         'ppr_last3_mean',
         'ppr_last5_mean',
         'ppr_last8_mean',
@@ -22,6 +22,20 @@ featurereg = {
         'ppr_prior_season_mean',
         'prior_season_games'
     ],
+    #List of features for game context(weather, home, temp, bets)
+    'gamecontextlst' : [
+        'team_spread',
+        'total_line',
+        'implied_team_total',
+        'rest_days',
+        'is_home',
+        'is_neutral_site',
+        'is_division_game',
+        'is_indoor',
+        'temp',
+        'wind',
+        'weather_missing'
+    ],
     #List of all identifiers and keys
     'idlst': [
         'gsis_id',
@@ -33,7 +47,8 @@ featurereg = {
         'position',
         'team',
         'opponent',
-        'played'
+        'played',
+        'is_relevant'
     ],
     #List of targets for models
     'target' : [
@@ -94,6 +109,10 @@ def createfeatures(player_weeks):
     #GROUP 3 FEATURES
     #team_spread, total_line, implied_team_total, rest_days, is_home, is_neutral_site, is_division_game, is_indoor
     #Exist already in natural state
+    #Fix and fill weather
+    player_weeks.loc[player_weeks['is_indoor'], 'temp'] = 70
+    player_weeks.loc[player_weeks['is_indoor'], 'wind'] = 0
+    player_weeks['weather_missing'] = (player_weeks['temp'].isna() | player_weeks['wind'].isna()).astype(int)
     
     return player_weeks
 
@@ -137,5 +156,5 @@ def buildfeatures():
     #Drop rows for seasons before 2016
     features_df = features_df[features_df['season'] >= 2016].reset_index(drop=True)
     #keep only relevant columns(features, ids, target)
-    features_df = features_df[featurereg['featureslst'] + featurereg['idlst'] + featurereg['target']]
+    features_df = features_df[[col for lst in featurereg.values() for col in lst]]
     return features_df
